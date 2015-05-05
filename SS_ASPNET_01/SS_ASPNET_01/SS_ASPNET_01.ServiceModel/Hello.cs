@@ -6,7 +6,7 @@ using ServiceStack;
 
 namespace SS_ASPNET_01.ServiceModel
 {
-    [Route("/hello/{Name}")]
+    [Route("/sayhello/{Name}",Verbs="PUT")]
     public class Hello : IReturn<HelloResponse>
     {
         public string Name { get; set; }
@@ -14,6 +14,22 @@ namespace SS_ASPNET_01.ServiceModel
 
     public class HelloResponse
     {
+        public string Result { get; set; }
+    }
+}
+
+namespace SS_ASPNET_01.HEllo22
+{
+    [Route("/sayhello2/{Name}", Verbs = "PUT")]
+    public class Hello : IReturn<HelloResponse>
+    {
+        public string Name { get; set; }
+    }
+
+    public class HelloResponse
+    {
+        public ResponseStatus ResponseStatus { get; set; } //Automatic exception handling
+
         public string Result { get; set; }
     }
 }
