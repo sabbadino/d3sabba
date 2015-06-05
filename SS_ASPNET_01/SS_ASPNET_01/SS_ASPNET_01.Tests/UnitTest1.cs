@@ -10,34 +10,34 @@ namespace SS_ASPNET_01.Tests
     [TestFixture]
     public class UnitTests
     {
-        private readonly ServiceStackHost appHost;
+    //    private readonly ServiceStackHost appHost;
 
         public UnitTests()
         {
-            appHost = new BasicAppHost(typeof(MyServices).Assembly)
-            {
-                ConfigureContainer = container =>
-                {
+      //      appHost = new BasicAppHost(typeof(MyServices).Assembly)
+           // {
+            //    ConfigureContainer = container =>
+              //  {
                     //Add your IoC dependencies here
-                }
-            }
-            .Init();
+               // }
+           // }
+        //    .Init();
         }
 
         [TestFixtureTearDown]
         public void TestFixtureTearDown()
         {
-            appHost.Dispose();
+          //  appHost.Dispose();
         }
 
-        [Test]
-        public void TestMethod1()
-        {
-            var service = appHost.Container.Resolve<MyServices>();
+        //[Test]
+        //public void TestMethod1()
+        //{
+        //    var service = appHost.Container.Resolve<MyServices>();
 
-            var response = (HelloResponse)service.Any(new Hello { MyName = "World" });
+        //    var response = (HelloResponse)service.Any(new Hello { MyName = "World" });
 
-            Assert.That(response.Result, Is.EqualTo("Hello, World!"));
-        }
+        //    Assert.That(response.Result, Is.EqualTo("Hello, World!"));
+        //}
     }
 }

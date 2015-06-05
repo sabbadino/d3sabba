@@ -1,10 +1,16 @@
 ﻿using System;
-using System.Text;
+using System.Diagnostics;
+
 using Funq;
 using ServiceStack;
-using ServiceStack.Model;
+
 using ServiceStack.Web;
 using SS_ASPNET_01.ServiceInterface;
+
+using ServiceStack.Api.Swagger;
+using ServiceStack.FluentValidation;
+using ServiceStack.Validation;
+using SS_ASPNET_01.ServiceModel;
 
 namespace SS_ASPNET_01
 {
@@ -20,66 +26,92 @@ namespace SS_ASPNET_01
 
         }
 
-        /// <summary>
-        /// Application specific configuration
-        /// This method should initialize any IoC resources utilized by your web service classes.
-        /// </summary>
-        /// <param name="container"></param>
+
+        public override void OnEndRequest(IRequest request = null)
+        {
+            base.OnEndRequest(request);
+        }
+
+        public override void OnStartupException(Exception ex)
+        {
+            Debug.WriteLine(ex.ToString());
+            base.OnStartupException(ex);
+        }
+
+
+			
+      public override void OnUncaughtException(IRequest httpReq, IResponse httpRes, string operationName, Exception ex)
+        {
+            base.OnUncaughtException(httpReq, httpRes, operationName, ex);
+        }
+
+	    public override object OnServiceException(IRequest httpReq, object request, Exception ex)
+	    {
+				return DtoUtils.CreateErrorResponse(request, ex);
+	    }
+
+			public override void OnExceptionTypeFilter(Exception ex, ResponseStatus responseStatus)
+			{
+				
+			}
+
+	    public object ServiceExceptionHandler(IRequest httpReq, object request, Exception exception)
+				{
+				
+						return DtoUtils.CreateErrorResponse(request, exception);
+					
+				}
+
+
+				public void UncaughtExceptionHandler(IRequest httpReq, IResponse httpRes, string operationName, Exception ex)
+				{
+					
+				}
+      
         public override void Configure(Container container)
         {
-         
-             this.ServiceExceptionHandlers.Add((httpReq, request, exception) => {
-             return MyCreateErrorResponse(request, exception);
-                 return DtoUtils.CreateErrorResponse(request, exception);
 
-    });
+					Plugins.Add(new SwaggerFeature());
+					Plugins.Add(new ValidationFeature());
+					container.Register<ServiceStack.FluentValidation.IValidator<Hello2>>(
+							new Hello2ValidatorCollection());
 
-            //Config examples
-            //this.Plugins.Add(new PostmanFeature());
-            //this.Plugins.Add(new CorsFeature());
+            SetConfig(new HostConfig
+            {
+                WsdlServiceNamespace = "http://myschemas.myservicestack.net/types",
+                DebugMode = true,
+                ReturnsInnerException = false
+            });
+
+
+	        ServiceExceptionHandlers.Add(this.ServiceExceptionHandler);
+					UncaughtExceptionHandlers.Add(this.UncaughtExceptionHandler);
+
+
+
+
+
+    //});
+
+
+
+
+
+      
         }
 
-        public static object MyCreateErrorResponse(object request, Exception ex)
-        {
-   
-      ResponseStatus responseStatus = ex.MyToResponseStatus();
-      if (HostContext.DebugMode)
-        responseStatus.StackTrace = DtoUtils.GetRequestErrorBody(request) + "\n" + ex.StackTrace;
-      object errorResponse = DtoUtils.CreateErrorResponse(request, ex, responseStatus);
-      HostContext.OnExceptionTypeFilter(ex, responseStatus);
-      return errorResponse;
- 
-        }
-
+      
        
     }
 
 
 
-    public static class Extensions
-{
-
-        public static ResponseStatus MyToResponseStatus(this Exception exception)
-        {
-            IResponseStatusConvertible statusConvertible = exception as IResponseStatusConvertible;
-            if (statusConvertible == null)
-                return DtoUtils.CreateResponseStatus(exception.GetType().Name, exception.AllMessages());
-            return statusConvertible.ToResponseStatus();
-        }
-
-        public static string AllMessages(this Exception ex)
-        {
-            var sb = new StringBuilder();
-            while (ex != null)
-            {
-                sb.Append(ex.Message);
-                if(ex.InnerException!=null)
-                    sb.Append(" --> ");
-                ex = ex.InnerException;
-            }
-            return sb.ToString();
-        }
-
-}
+		public class Hello2ValidatorCollection : AbstractValidator<Hello2>
+		{
+			public Hello2ValidatorCollection()
+			{
+				When(x => true, () => { RuleFor(r => r.Number).GreaterThan(-1); });
+			}
+		}
 
 }

@@ -7,49 +7,11 @@ using SS_ASPNET_01.ServiceModel;
 
 namespace SS_ASPNET_01.ServiceInterface
 {
-    public class MyServices : Service
-    {
-        public object Any(HelloWord request)
-        {
-            return new HelloWordResponsexx { Result = "Hello, {0}!".Fmt(request.MyName) };
-        }
-    }
-
-    //public class MyServices2 : Service
-    //{
-    //    private void x()
-    //    {
-    //        throw new Exception("bbb");
-    //    }
-
-    //    public object Any(HEllo22.Hello request)
-    //    {
-    //        //try
-    //        //{
-    //            try
-    //            {
-    //                x();
-    //                return new HEllo22.HelloResponse {Result = "Hello, {0}!".Fmt(request.Name)};
-    //            }
-    //            catch (Exception ex)
-    //            {
-    //                throw new Exception("aaa", ex);
-    //            }
-    //        //}
-    //        //catch (Exception ex)
-    //        //{
-    //        //    var x = new ResponseStatus()
-    //        //    {
-    //        //        ErrorCode = "500",
-    //        //            Message = ex.ToString()
-    //        //    };
-    //        //    var y = new ResponseError();
-    //        //    y.ErrorCode = "500";
-    //        //    x.Errors = new List<ResponseError>();
-    //        //    x.Errors.Add(y);
-
-    //        //    return new HEllo22.HelloResponse() { ResponseStatus = x};
-    //        //}
-    //    }
-    //}
+	public class MyServices : Service
+	{
+		public object Any(Hello2 request)
+		{
+			return new Hello2Response {Result = request.Number + 1};
+		}
+	}
 }
