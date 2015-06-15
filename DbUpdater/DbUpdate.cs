@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
+using System.Configuration;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -11,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Transactions;
+using System.Xml;
 using UnityInfrastructure.Logging;
 
 namespace DbUpdater
@@ -46,27 +48,34 @@ namespace DbUpdater
   )
 )";
 
-		private readonly string _cnString ;
+		private readonly XmlDocument _configXml = new XmlDocument();
 		private readonly string[] _scriptsList;
+		private readonly string _targetEnvironment;
 
-
-		public DbUpdate(string cnString, string[] scriptsList)
+		public DbUpdate(string targetEnvironment, string configFile, string[] scriptsList)
 		{
 			using (var tc = new UnityTraceContext())
 			{
-				_cnString = cnString;
+				_targetEnvironment = targetEnvironment;
+				if(!File.Exists(configFile)) throw new Exception("File " + configFile + " does not exists");
+				_configXml.Load(configFile);
+				tc.TraceMessage(_configXml.OuterXml);
 				_scriptsList = scriptsList;
+				tc.TraceMessage("configFile=" + configFile + " _scriptsList.Length=" + scriptsList.Length);
 			}
 		}
 
-		public DbUpdate(string cnString, string scriptsFolder)
+		public DbUpdate(string targetEnvironment, string configFile, string scriptsFolder)
 		{
 			using (var tc = new UnityTraceContext())
 			{
-				_cnString = cnString;
+				_targetEnvironment = targetEnvironment;
+				if (!File.Exists(configFile)) throw new Exception("File " + configFile + " does not exists");
+				_configXml.Load(configFile);
+				tc.TraceMessage(_configXml.OuterXml);
 				if (!Directory.Exists(scriptsFolder)) throw new Exception("Directory " + scriptsFolder + " does not exists");
 				_scriptsList = Directory.GetFiles(scriptsFolder,"*.sql",SearchOption.AllDirectories);
-				tc.TraceMessage("_cnString=" + _cnString + " _scriptsFolder=" + scriptsFolder);
+				tc.TraceMessage("configFile=" + configFile + " _scriptsFolder=" + scriptsFolder);
 			}
 		}
 
@@ -85,19 +94,57 @@ namespace DbUpdater
 
 		private void updateDbForModule(KeyValuePair<string, List<ScriptInfo>> scriptsForModule)
 		{
-			using (var ts = new TransactionScope())
+			using (var tc = new UnityTraceContext())
 			{
-				using (var cn = new SqlConnection(_cnString))
+				foreach (var script in scriptsForModule.Value)
 				{
-					cn.Open();
-					var dbcurverForModule = getDbVersion(cn, scriptsForModule.Key);
-					var scriptsInfoToExecute = scriptsForModule.Value.Where(v => v.Version > dbcurverForModule).ToList();
-					if (scriptsInfoToExecute.Count > 0)
+					var cnstrings = getCnStringsFromScriptConfiguration(script);
+					foreach (var cnString in cnstrings)
 					{
-						executeScripts(scriptsInfoToExecute, cn);
+						tc.TraceMessage("cnstring=" + cnString);
+						using (var ts = new TransactionScope())
+						{
+							using (var cn = new SqlConnection(cnString))
+							{
+								cn.Open();
+								var dbcurverForModule = getDbVersion(cn, scriptsForModule.Key);
+								tc.TraceMessage("dbcurver=" + dbcurverForModule.ToString() + " for module=" + scriptsForModule.Key);
+								var scriptsInfoToExecute = scriptsForModule.Value.Where(v => v.Version > dbcurverForModule).ToList();
+								if (scriptsInfoToExecute.Count > 0)
+								{
+									executeScripts(scriptsInfoToExecute, cn);
+								}
+							}
+							ts.Complete();
+						}
 					}
 				}
-				ts.Complete();
+			}
+		}
+
+		private List<string> getCnStringsFromScriptConfiguration(ScriptInfo script)
+		{
+			using (var tc = new UnityTraceContext())
+			{
+				tc.TraceMessage("script.ScriptName=" + script.ScriptName + "script.Configuration=" + script.Configuration);
+				var listcnstring = new List<string>();
+				var nodes =
+					_configXml.SelectNodes("/config/context_configurations/context_configuration[@name='" + script.Configuration +
+					                       "']/context/@name");
+				if (nodes.Count == 0) throw new Exception("no configuration named " + script.Configuration + " was found");
+				var envnode = _configXml.SelectSingleNode("/config/environments/environment[@name='" + _targetEnvironment + "']");
+				if (envnode == null) throw new Exception("no environment named " + _targetEnvironment + " was found");
+				foreach (XmlNode node in nodes)
+				{
+					tc.TraceMessage("script is in context " + node.InnerText);
+					var cnstringAttr = envnode.SelectSingleNode("context[@name='" + node.InnerText + "']/@connection_string");
+					if (cnstringAttr != null)
+					{
+						tc.TraceMessage("Adding cnstring " + cnstringAttr.InnerText);
+						listcnstring.Add(cnstringAttr.InnerText);
+					}
+				}
+				return listcnstring;
 			}
 		}
 
@@ -186,13 +233,25 @@ namespace DbUpdater
 					int pos = Path.GetFileName(scriptPath).IndexOf('_');
 					if (pos != -1)
 					{
-						scriptInfo.Module = Path.GetFileName(scriptPath).Substring(0, pos);
+						scriptInfo.Configuration = Path.GetFileName(scriptPath).Substring(0, pos);
+					}
+					else
+					{
+						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the Configuration name");
+						continue;
+					}
+
+					int pos1 = Path.GetFileName(scriptPath).IndexOf('_',pos+1);
+					if (pos1 != -1)
+					{
+						scriptInfo.Module = Path.GetFileName(scriptPath).Substring(pos+1, pos1 -pos -1);
 					}
 					else
 					{
 						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the module name");
 						continue;
 					}
+
 					List<ScriptInfo> scriptListforModule = null;
 					if (!scriptInfos.TryGetValue(scriptInfo.Module, out scriptListforModule))
 					{
@@ -262,6 +321,7 @@ namespace DbUpdater
 		public Version Version;
 		public string ScriptName;
 		public string Module;
+		public string Configuration;
 		public string Comment="";
 
 		public int CompareTo(object obj)

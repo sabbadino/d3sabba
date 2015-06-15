@@ -21,7 +21,7 @@ namespace DbUpdater
 		{
 			try
 			{
-				var dbUpdate = new DbUpdate(textBox_cnstring.Text, textBox_folder.Text);
+				var dbUpdate = new DbUpdate(textBox_Env.Text, textBox_conffile.Text, textBox_folder.Text);
 				dbUpdate.Doupdate();
 				MessageBox.Show("Done");
 			}
