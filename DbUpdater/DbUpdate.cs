@@ -126,7 +126,7 @@ namespace DbUpdater
 		{
 			using (var tc = new UnityTraceContext())
 			{
-				tc.TraceMessage("script.ScriptName=" + script.ScriptName + "script.Configuration=" + script.Configuration);
+				tc.TraceMessage("Processing script.ScriptName=" + script.ScriptName + "script.Configuration=" + script.Configuration);
 				var listcnstring = new List<string>();
 				var nodes =
 					_configXml.SelectNodes("/config/context_configurations/context_configuration[@name='" + script.Configuration +
