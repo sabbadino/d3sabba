@@ -1,0 +1,2 @@
+ALTER TABLE BRS.t1 ADD
+	[desc4] nchar(10) NULL

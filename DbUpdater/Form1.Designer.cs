@@ -28,12 +28,81 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.components = new System.ComponentModel.Container();
+			this.button1 = new System.Windows.Forms.Button();
+			this.textBox_cnstring = new System.Windows.Forms.TextBox();
+			this.label1 = new System.Windows.Forms.Label();
+			this.label2 = new System.Windows.Forms.Label();
+			this.textBox_folder = new System.Windows.Forms.TextBox();
+			this.SuspendLayout();
+			// 
+			// button1
+			// 
+			this.button1.Location = new System.Drawing.Point(14, 155);
+			this.button1.Name = "button1";
+			this.button1.Size = new System.Drawing.Size(75, 23);
+			this.button1.TabIndex = 0;
+			this.button1.Text = "Go";
+			this.button1.UseVisualStyleBackColor = true;
+			this.button1.Click += new System.EventHandler(this.button1_Click);
+			// 
+			// textBox_cnstring
+			// 
+			this.textBox_cnstring.Location = new System.Drawing.Point(14, 23);
+			this.textBox_cnstring.Name = "textBox_cnstring";
+			this.textBox_cnstring.Size = new System.Drawing.Size(472, 20);
+			this.textBox_cnstring.TabIndex = 1;
+			this.textBox_cnstring.Text = "Data Source=Li-306;Initial Catalog=provaversioning;User ID=sa;Password=muadib";
+			// 
+			// label1
+			// 
+			this.label1.AutoSize = true;
+			this.label1.Location = new System.Drawing.Point(11, 9);
+			this.label1.Name = "label1";
+			this.label1.Size = new System.Drawing.Size(44, 13);
+			this.label1.TabIndex = 2;
+			this.label1.Text = "cnstring";
+			// 
+			// label2
+			// 
+			this.label2.AutoSize = true;
+			this.label2.Location = new System.Drawing.Point(11, 58);
+			this.label2.Name = "label2";
+			this.label2.Size = new System.Drawing.Size(33, 13);
+			this.label2.TabIndex = 4;
+			this.label2.Text = "folder";
+			// 
+			// textBox_folder
+			// 
+			this.textBox_folder.Location = new System.Drawing.Point(14, 72);
+			this.textBox_folder.Name = "textBox_folder";
+			this.textBox_folder.Size = new System.Drawing.Size(472, 20);
+			this.textBox_folder.TabIndex = 3;
+			this.textBox_folder.Text = "C:\\ProgrammingStuff\\MyCode\\d3sabba\\DbUpdater\\scripts";
+			// 
+			// Form1
+			// 
+			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.ClientSize = new System.Drawing.Size(516, 261);
+			this.Controls.Add(this.label2);
+			this.Controls.Add(this.textBox_folder);
+			this.Controls.Add(this.label1);
+			this.Controls.Add(this.textBox_cnstring);
+			this.Controls.Add(this.button1);
+			this.Name = "Form1";
 			this.Text = "Form1";
+			this.ResumeLayout(false);
+			this.PerformLayout();
+
 		}
 
 		#endregion
+
+		private System.Windows.Forms.Button button1;
+		private System.Windows.Forms.TextBox textBox_cnstring;
+		private System.Windows.Forms.Label label1;
+		private System.Windows.Forms.Label label2;
+		private System.Windows.Forms.TextBox textBox_folder;
 	}
 }
 

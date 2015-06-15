@@ -16,5 +16,17 @@ namespace DbUpdater
 		{
 			InitializeComponent();
 		}
+
+		private void button1_Click(object sender, EventArgs e)
+		{
+			try
+			{
+				var dbUpdate = new DbUpdate(textBox_cnstring.Text, textBox_folder.Text);
+				dbUpdate.Doupdate();
+				MessageBox.Show("Done");
+			}
+			catch (Exception ex) {
+				MessageBox.Show(ex.ToString());}
+		}
 	}
 }
