@@ -21,12 +21,26 @@ namespace DbUpdater
 		{
 			try
 			{
-				var dbUpdate = new DbUpdate(textBox_Env.Text, textBox_conffile.Text, textBox_folder.Text);
+				var dbUpdate = new DbUpdateByVersion(radioButton_F.Checked ? UpdateStrategy.Full : UpdateStrategy.WaterMark,textBox_Env.Text, textBox_conffile.Text, textBox_folder.Text);
 				dbUpdate.Doupdate();
 				MessageBox.Show("Done");
 			}
 			catch (Exception ex) {
 				MessageBox.Show(ex.ToString());}
+		}
+
+		private void button2_Click(object sender, EventArgs e)
+		{
+			try
+			{
+				var dbUpdate = new DbUpdateByDate(radioButton_F.Checked ? UpdateStrategy.Full : UpdateStrategy.WaterMark, textBox_Env.Text, textBox_conffile.Text, textBox_scripbydate.Text);
+				dbUpdate.Doupdate();
+				MessageBox.Show("Done");
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(ex.ToString());
+			}
 		}
 	}
 }

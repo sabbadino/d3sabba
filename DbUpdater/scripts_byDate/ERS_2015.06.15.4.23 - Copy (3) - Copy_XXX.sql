@@ -1,0 +1,2 @@
+ALTER TABLE ERSDate.t1 ADD
+	intero3 int NULL

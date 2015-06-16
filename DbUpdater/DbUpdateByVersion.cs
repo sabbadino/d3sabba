@@ -17,7 +17,10 @@ using UnityInfrastructure.Logging;
 
 namespace DbUpdater
 {
-	public class DbUpdate
+
+	
+
+	public class DbUpdateByVersion
 	{
 
 		private static Regex _VersionRegEx= new Regex("\\d+\\.\\d+\\.\\d+\\.\\d+");
@@ -26,10 +29,10 @@ namespace DbUpdater
 		private const string C_SCHEMA = "dbo";
 
 		private const string C_INSER_VERSION_ROW =
-			@"INSERT into [dbo].[dbVersion] ([ModuleID], [Major],[Minor],[Build],[Revision],[Comment], [DateInsert]) 
+			@"INSERT into [" + C_SCHEMA + "].[" + C_VERSIONTABLE + @"] ([ModuleID], [Major],[Minor],[Build],[Revision],[Comment], [DateInsert]) 
 		VALUES(@ModuleID, @Major,@Minor,@Build,@Revision,@Comment,@DateInsert) ";
 
-		private const string C_CREATEVERSIONTABLE = @"CREATE TABLE [dbo].[dbVersion](
+		private const string C_CREATEVERSIONTABLE = @"CREATE TABLE [" + C_SCHEMA + "].[" + C_VERSIONTABLE + @"](
 	[Id] [int] IDENTITY(1,1) NOT NULL,
 	[ModuleID] [varchar](100) NOT NULL,
 	[Major] [int] NOT NULL,
@@ -51,11 +54,12 @@ namespace DbUpdater
 		private readonly XmlDocument _configXml = new XmlDocument();
 		private readonly string[] _scriptsList;
 		private readonly string _targetEnvironment;
-
-		public DbUpdate(string targetEnvironment, string configFile, string[] scriptsList)
+		private readonly UpdateStrategy _updateStrategy;
+		public DbUpdateByVersion(UpdateStrategy updateStrategy, string targetEnvironment, string configFile, string[] scriptsList)
 		{
 			using (var tc = new UnityTraceContext())
 			{
+				_updateStrategy = updateStrategy;
 				_targetEnvironment = targetEnvironment;
 				if(!File.Exists(configFile)) throw new Exception("File " + configFile + " does not exists");
 				_configXml.Load(configFile);
@@ -65,10 +69,11 @@ namespace DbUpdater
 			}
 		}
 
-		public DbUpdate(string targetEnvironment, string configFile, string scriptsFolder)
+		public DbUpdateByVersion(UpdateStrategy updateStrategy , string targetEnvironment, string configFile, string scriptsFolder)
 		{
 			using (var tc = new UnityTraceContext())
 			{
+				_updateStrategy = updateStrategy;
 				_targetEnvironment = targetEnvironment;
 				if (!File.Exists(configFile)) throw new Exception("File " + configFile + " does not exists");
 				_configXml.Load(configFile);
@@ -92,7 +97,7 @@ namespace DbUpdater
 		}
 
 
-		private void updateDbForModule(KeyValuePair<string, List<ScriptInfo>> scriptsForModule)
+		private void updateDbForModule(KeyValuePair<string, List<ScriptInfoByVersion>> scriptsForModule)
 		{
 			using (var tc = new UnityTraceContext())
 			{
@@ -107,9 +112,20 @@ namespace DbUpdater
 							using (var cn = new SqlConnection(cnString))
 							{
 								cn.Open();
-								var dbcurverForModule = getDbVersion(cn, scriptsForModule.Key);
-								tc.TraceMessage("dbcurver=" + dbcurverForModule.ToString() + " for module=" + scriptsForModule.Key);
-								var scriptsInfoToExecute = scriptsForModule.Value.Where(v => v.Version > dbcurverForModule).ToList();
+								var scriptsInfoToExecute = new List<ScriptInfoByVersion>();
+								if (_updateStrategy == UpdateStrategy.Full)
+								{
+									var dbcurUpdatesForModule = getDbExistingUpdates(cn, scriptsForModule.Key);
+									scriptsInfoToExecute =
+										scriptsForModule.Value.Where(v => !dbcurUpdatesForModule.Contains(v.Version)).ToList();
+								}
+								else
+								{
+									var dbcurVer = getDbVersion(cn, scriptsForModule.Key);
+									scriptsInfoToExecute =
+										scriptsForModule.Value.Where(v => v.Version > dbcurVer).ToList();
+								}
+
 								if (scriptsInfoToExecute.Count > 0)
 								{
 									executeScripts(scriptsInfoToExecute, cn);
@@ -122,7 +138,7 @@ namespace DbUpdater
 			}
 		}
 
-		private List<string> getCnStringsFromScriptConfiguration(ScriptInfo script)
+		private List<string> getCnStringsFromScriptConfiguration(ScriptInfoByVersion script)
 		{
 			using (var tc = new UnityTraceContext())
 			{
@@ -149,7 +165,7 @@ namespace DbUpdater
 		}
 
 
-		private void updateDbVersion(SqlConnection cn, ScriptInfo scriptInfo)
+		private void updateDbVersion(SqlConnection cn, ScriptInfoByVersion scriptInfoByVersion)
 		{
 			using (var tc = new UnityTraceContext())
 			{
@@ -158,32 +174,32 @@ namespace DbUpdater
 				
 				var param = cmd.CreateParameter();
 				param.ParameterName = "ModuleID";
-				param.Value = scriptInfo.Module;
+				param.Value = scriptInfoByVersion.Module;
 				cmd.Parameters.Add(param);
 
 				param = cmd.CreateParameter();
 				param.ParameterName = "Major"; 
-				param.Value  = scriptInfo.Version.Major;
+				param.Value  = scriptInfoByVersion.Version.Major;
 				cmd.Parameters.Add(param);
 
 				param = cmd.CreateParameter();
 				param.ParameterName = "Minor"; 
-				param.Value  = scriptInfo.Version.Minor;
+				param.Value  = scriptInfoByVersion.Version.Minor;
 				cmd.Parameters.Add(param);
 				
 				param = cmd.CreateParameter();
 				param.ParameterName = "Build"; 
-				param.Value  = scriptInfo.Version.Build;
+				param.Value  = scriptInfoByVersion.Version.Build;
 				cmd.Parameters.Add(param);
 
 				param = cmd.CreateParameter();
 				param.ParameterName = "Revision"; 
-				param.Value  = scriptInfo.Version.Revision;
+				param.Value  = scriptInfoByVersion.Version.Revision;
 				cmd.Parameters.Add(param);
 
 				param = cmd.CreateParameter();
 				param.ParameterName = "Comment";
-				param.Value = scriptInfo.Comment;
+				param.Value = scriptInfoByVersion.Comment;
 				cmd.Parameters.Add(param);
 
 				param = cmd.CreateParameter();
@@ -195,7 +211,7 @@ namespace DbUpdater
 			}
 		}
 
-		private void executeScripts(List<ScriptInfo> scriptsInfoToExecute, SqlConnection cn)
+		private void executeScripts(List<ScriptInfoByVersion> scriptsInfoToExecute, SqlConnection cn)
 		{
 			using (var tc = new UnityTraceContext())
 			{
@@ -209,18 +225,18 @@ namespace DbUpdater
 			}
 		}
 
-		private Dictionary<string,List<ScriptInfo>> loadScriptInfo()
+		private Dictionary<string,List<ScriptInfoByVersion>> loadScriptInfo()
 		{
 			using (var tc = new UnityTraceContext())
 			{
-				var scriptInfos = new Dictionary<string,List<ScriptInfo>>();
+				var scriptInfos = new Dictionary<string,List<ScriptInfoByVersion>>();
 				foreach(var scriptPath in _scriptsList)
 				{
 					tc.TraceMessage("Processing script " + scriptPath);
-					var scriptInfo = new ScriptInfo();
+					var scriptInfo = new ScriptInfoByVersion();
 					scriptInfo.Path = scriptPath;
-					scriptInfo.ScriptName= Path.GetFileName(scriptPath);
-					var matches = _VersionRegEx.Match(Path.GetFileName(scriptPath));
+					scriptInfo.ScriptName= Path.GetFileNameWithoutExtension(scriptPath);
+					var matches = _VersionRegEx.Match(scriptInfo.ScriptName);
 					if (matches.Length != 0)
 					{
 						scriptInfo.Version = new Version(matches.Value);
@@ -230,32 +246,42 @@ namespace DbUpdater
 						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer version from name");
 						continue;
 					}
-					int pos = Path.GetFileName(scriptPath).IndexOf('_');
+					int pos = scriptInfo.ScriptName.IndexOf('_');
 					if (pos != -1)
 					{
-						scriptInfo.Configuration = Path.GetFileName(scriptPath).Substring(0, pos);
+						scriptInfo.Module = scriptInfo.ScriptName.Substring(0, pos);
 					}
 					else
 					{
-						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the Configuration name");
+						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the modulename");
 						continue;
 					}
 
-					int pos1 = Path.GetFileName(scriptPath).IndexOf('_',pos+1);
+					int pos1 = scriptInfo.ScriptName.LastIndexOf('_');
+					if (pos1 == pos)
+					{
+						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the Configuration  name (only one _ )");
+						continue;
+					}
 					if (pos1 != -1)
 					{
-						scriptInfo.Module = Path.GetFileName(scriptPath).Substring(pos+1, pos1 -pos -1);
+						if (pos1 == (scriptInfo.ScriptName.Length -1))
+						{
+							tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the Configuration  name ( nothing after _ )");
+							continue;
+						}
+						scriptInfo.Configuration = scriptInfo.ScriptName.Substring(pos1 + 1, scriptInfo.ScriptName.Length - pos1 -1);
 					}
 					else
 					{
-						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the module name");
+						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the Configuration  name");
 						continue;
 					}
 
-					List<ScriptInfo> scriptListforModule = null;
+					List<ScriptInfoByVersion> scriptListforModule = null;
 					if (!scriptInfos.TryGetValue(scriptInfo.Module, out scriptListforModule))
 					{
-						scriptListforModule  = new List<ScriptInfo>();
+						scriptListforModule  = new List<ScriptInfoByVersion>();
 						scriptInfos.Add(scriptInfo.Module, scriptListforModule);
 					}
 					if (scriptListforModule.Contains(scriptInfo))
@@ -269,7 +295,40 @@ namespace DbUpdater
 		}
 
 
-	
+
+		private List<Version> getDbExistingUpdates(SqlConnection cn, string moduleId)
+		{
+			using (var tc = new UnityTraceContext())
+			{
+				var updates = new List<Version>();
+				var lcmd = cn.CreateCommand();
+				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + C_SCHEMA + "' AND  TABLE_NAME = '" + C_VERSIONTABLE + "'";
+				if ((int)lcmd.ExecuteScalar() == 0)
+				{
+					createVersionTable(cn);
+				}
+				else
+				{
+					lcmd.CommandText = "SELECT top 1 * from " + C_SCHEMA + "." + C_VERSIONTABLE + " where moduleid=@moduleid order by major desc,minor desc,build desc, revision desc";
+					var parammoduleid = lcmd.CreateParameter();
+					parammoduleid.ParameterName = "moduleid";
+					parammoduleid.Value = moduleId;
+					lcmd.Parameters.Add(parammoduleid);
+					using (var rd = lcmd.ExecuteReader())
+					{
+						if (rd.HasRows)
+						{
+							while (rd.Read())
+							{
+								updates.Add(new Version((int)rd["major"], (int)rd["minor"], (int)rd["build"], (int)rd["revision"]));
+							}
+						}
+					}
+				}
+				tc.TraceMessage("updates.Count=" + updates.Count() + " moduleid=" + moduleId);
+				return updates;
+			}
+		}
 
 		private Version getDbVersion(SqlConnection cn, string moduleId)
 		{
@@ -314,7 +373,7 @@ namespace DbUpdater
 		}
 	}
 
-	public class ScriptInfo : IComparable, IEquatable<ScriptInfo>
+	public class ScriptInfoByVersion : IComparable, IEquatable<ScriptInfoByVersion>
 
 	{
 		public string Path;
@@ -326,10 +385,10 @@ namespace DbUpdater
 
 		public int CompareTo(object obj)
 		{
-			return this.Version.CompareTo(((ScriptInfo)obj).Version);
+			return this.Version.CompareTo(((ScriptInfoByVersion)obj).Version);
 		}
 
-		public bool Equals(ScriptInfo other)
+		public bool Equals(ScriptInfoByVersion other)
 		{
 			return this.Version == other.Version;
 		}
