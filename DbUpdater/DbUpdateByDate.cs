@@ -121,7 +121,7 @@
 //									scriptsInfoToExecute =
 //										scriptsForModule.Value.Where(v => v.DateVersion > dbcurVer).ToList();
 //								}
-//								tc.TraceMessage("scriptsInfoToExecute.Count=" + scriptsInfoToExecute.Count + " for module " + script.Module) ; 
+//								tc.TraceMessage("scriptsInfoToExecute.Count=" + scriptsInfoToExecute.Count + " for module " + script.Schema) ; 
 //								if (scriptsInfoToExecute.Count > 0)
 //								{
 //									executeScripts(scriptsInfoToExecute, cn);
@@ -170,7 +170,7 @@
 				
 //				var param = cmd.CreateParameter();
 //				param.ParameterName = "ModuleID";
-//				param.Value = scriptInfoByDate.Module;
+//				param.Value = scriptInfoByDate.Schema;
 //				cmd.Parameters.Add(param);
 
 //				param = cmd.CreateParameter();
@@ -237,7 +237,7 @@
 //					int pos = scriptInfo.ScriptName.IndexOf('_');
 //					if (pos != -1)
 //					{
-//						scriptInfo.Module = scriptInfo.ScriptName.Substring(0, pos);
+//						scriptInfo.Schema = scriptInfo.ScriptName.Substring(0, pos);
 //					}
 //					else
 //					{
@@ -267,13 +267,13 @@
 //					}
 
 //					List<ScriptInfoByDate> scriptListforModule = null;
-//					if (!scriptInfos.TryGetValue(scriptInfo.Module, out scriptListforModule))
+//					if (!scriptInfos.TryGetValue(scriptInfo.Schema, out scriptListforModule))
 //					{
 //						scriptListforModule  = new List<ScriptInfoByDate>();
-//						scriptInfos.Add(scriptInfo.Module, scriptListforModule);
+//						scriptInfos.Add(scriptInfo.Schema, scriptListforModule);
 //					}
 //					if (scriptListforModule.Contains(scriptInfo))
-//						throw new Exception("script with version " + scriptInfo.DateVersion + " has already been added to the list for module " + scriptInfo.Module);
+//						throw new Exception("script with version " + scriptInfo.DateVersion + " has already been added to the list for module " + scriptInfo.Schema);
 //					scriptListforModule.Add(scriptInfo);
 //				};
 //				foreach (var scriptset in scriptInfos.Values)
@@ -382,7 +382,7 @@
 //		public string Path;
 //		public DateTime DateVersion;
 //		public string ScriptName;
-//		public string Module;
+//		public string Schema;
 //		public string Configuration;
 //		public string Comment="";
 

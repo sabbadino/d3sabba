@@ -26,24 +26,23 @@ namespace DbUpdater
 		private static Regex _VersionRegEx= new Regex("\\d+\\.\\d+\\.\\d+\\.\\d+");
 
 		private const string C_VERSIONTABLE ="dbversion";
-		private const string C_SCHEMA = "soa";
+		private const string C_SCHEMA = "soa-#service#";
+		private const string C_SERVICE = "#service#";
 
-		private const string C_INSER_VERSION_ROW =
-			@"INSERT into [" + C_SCHEMA + "].[" + C_VERSIONTABLE + @"] ([ModuleID], [Major],[Minor],[Build],[Revision],[Comment], [DateInsert]) 
-		VALUES(@ModuleID, @Major,@Minor,@Build,@Revision,@Comment,@DateInsert) ";
+		private const string C_INSERT_VERSION_ROW =
+			@"INSERT into [" + C_SCHEMA + "].[" + C_VERSIONTABLE + @"] ([Major],[Minor],[Build],[Revision],[Comment], [DateInsert]) 
+		VALUES(@Major,@Minor,@Build,@Revision,@Comment,@DateInsert) ";
 		private const string C_CREATESOASCHEMA = @"CREATE SCHEMA [" + C_SCHEMA + @"]";
 		private const string C_CREATEVERSIONTABLE = @"CREATE TABLE [" + C_SCHEMA + "].[" + C_VERSIONTABLE + @"](
 	[Id] [int] IDENTITY(1,1) NOT NULL,
-	[ModuleID] [varchar](100) NOT NULL,
 	[Major] [int] NOT NULL,
 	[Minor] [int] NOT NULL,
 	[Build] [int] NOT NULL,
 	[Revision] [int] NOT NULL,
 	[DateInsert] [datetime] NOT NULL,
 	[Comment] [varchar](max) NULL,
-	CONSTRAINT [PK_module_Id] PRIMARY KEY CLUSTERED (	[Id] ASC) , 
+	CONSTRAINT [PK_" + C_VERSIONTABLE + @"] PRIMARY KEY CLUSTERED (	[Id] ASC) , 
 	CONSTRAINT [IX_Unique_Ver] UNIQUE NONCLUSTERED (	
-		[ModuleID] ASC,
 		[Major] DESC,
 		[Minor] DESC,
 		[Build] DESC,
@@ -89,20 +88,20 @@ namespace DbUpdater
 			using (var tc = new UnityTraceContext())
 			{
 				var scriptsInfo = loadScriptInfo();
-				foreach (var scriptsForModule in scriptsInfo)
+				foreach (var scriptsForSchema in scriptsInfo)
 				{
-					updateDbForModule(scriptsForModule);
+					updateDbForSchema(scriptsForSchema);
 				}
 			}
 		}
 
 
-		private void updateDbForModule(KeyValuePair<string, List<ScriptInfoByVersion>> scriptsForModule)
+		private void updateDbForSchema(KeyValuePair<string, List<ScriptInfoByVersion>> scriptsForSchema)
 		{
 			using (var tc = new UnityTraceContext())
 			{
 				// get all the db potententially involved in the update
-				var cnstrings = getCnStringsFromScriptConfiguration(scriptsForModule.Value);
+				var cnstrings = getCnStringsFromScriptConfiguration(scriptsForSchema.Value);
 				foreach (var cnString in cnstrings)
 				{
 						tc.TraceMessage("cnstring=" + cnString);
@@ -115,16 +114,16 @@ namespace DbUpdater
 								// cerco gli script da eseguire per quel db .. escludo quelli script che su quel db non deono andare ( v.ConnectionStrings.Contains(cnString) )
 								if (_updateStrategy == UpdateStrategy.Full)
 								{
-									var dbcurUpdatesForModule = getDbExistingUpdates(cn, scriptsForModule.Key);
+									var dbcurUpdatesForSchema = getDbExistingUpdates(cn, scriptsForSchema.Key);
 									scriptsInfoToExecute =
-										scriptsForModule.Value.Where(
-											v => !dbcurUpdatesForModule.Contains(v.Version) && v.ConnectionStrings.Contains(cnString)).ToList();
+										scriptsForSchema.Value.Where(
+											v => !dbcurUpdatesForSchema.Contains(v.Version) && v.ConnectionStrings.Contains(cnString)).ToList();
 								}
 								else
 								{
-									var dbcurVer = getDbVersion(cn, scriptsForModule.Key);
+									var dbcurVer = getDbVersion(cn, scriptsForSchema.Key);
 									scriptsInfoToExecute =
-										scriptsForModule.Value.Where(v => v.Version > dbcurVer && v.ConnectionStrings.Contains(cnString)).ToList();
+										scriptsForSchema.Value.Where(v => v.Version > dbcurVer && v.ConnectionStrings.Contains(cnString)).ToList();
 								}
 
 								if (scriptsInfoToExecute.Count > 0)
@@ -179,14 +178,10 @@ namespace DbUpdater
 			using (var tc = new UnityTraceContext())
 			{
 				var cmd = cn.CreateCommand();
-				cmd.CommandText = C_INSER_VERSION_ROW;
+				cmd.CommandText = C_INSERT_VERSION_ROW.Replace(C_SERVICE, scriptInfoByVersion.Schema);
 				
-				var param = cmd.CreateParameter();
-				param.ParameterName = "ModuleID";
-				param.Value = scriptInfoByVersion.Module;
-				cmd.Parameters.Add(param);
 
-				param = cmd.CreateParameter();
+				var param = cmd.CreateParameter();
 				param.ParameterName = "Major"; 
 				param.Value  = scriptInfoByVersion.Version.Major;
 				cmd.Parameters.Add(param);
@@ -259,7 +254,7 @@ namespace DbUpdater
 					int pos = scriptInfo.ScriptName.IndexOf('_');
 					if (pos != -1)
 					{
-						scriptInfo.Module = scriptInfo.ScriptName.Substring(0, pos);
+						scriptInfo.Schema = scriptInfo.ScriptName.Substring(0, pos);
 					}
 					else
 					{
@@ -288,15 +283,15 @@ namespace DbUpdater
 						continue;
 					}
 
-					List<ScriptInfoByVersion> scriptListforModule = null;
-					if (!scriptInfos.TryGetValue(scriptInfo.Module, out scriptListforModule))
+					List<ScriptInfoByVersion> scriptListforSchema = null;
+					if (!scriptInfos.TryGetValue(scriptInfo.Schema, out scriptListforSchema))
 					{
-						scriptListforModule  = new List<ScriptInfoByVersion>();
-						scriptInfos.Add(scriptInfo.Module, scriptListforModule);
+						scriptListforSchema  = new List<ScriptInfoByVersion>();
+						scriptInfos.Add(scriptInfo.Schema, scriptListforSchema);
 					}
-					if (scriptListforModule.Contains(scriptInfo))
-						throw new Exception("script with version " + scriptInfo.Version + " has already been added to the list for module " + scriptInfo.Module);
-					scriptListforModule.Add(scriptInfo);
+					if (scriptListforSchema.Contains(scriptInfo))
+						throw new Exception("script with version " + scriptInfo.Version + " has already been added to the list for module " + scriptInfo.Schema);
+					scriptListforSchema.Add(scriptInfo);
 				};
 				foreach (var scriptset in scriptInfos.Values)
 					scriptset.Sort();
@@ -306,30 +301,26 @@ namespace DbUpdater
 
 
 
-		private List<Version> getDbExistingUpdates(SqlConnection cn, string moduleId)
+		private List<Version> getDbExistingUpdates(SqlConnection cn, string schema)
 		{
 			using (var tc = new UnityTraceContext())
 			{
 				var updates = new List<Version>();
 				var lcmd = cn.CreateCommand();
 
-				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.schemata WHERE SCHEMA_NAME = '" + C_SCHEMA + "'";
+				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.schemata WHERE SCHEMA_NAME = '" + C_SCHEMA.Replace(C_SERVICE,schema) + "'";
 				if ((int)lcmd.ExecuteScalar() == 0)
 				{
-					createsoaSchema(cn);
+					createsoaSchema(cn,schema);
 				}
-				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + C_SCHEMA + "' AND  TABLE_NAME = '" + C_VERSIONTABLE + "'";
+				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + C_SCHEMA.Replace(C_SERVICE, schema) + "' AND  TABLE_NAME = '" + C_VERSIONTABLE + "'";
 				if ((int)lcmd.ExecuteScalar() == 0)
 				{
-					createVersionTable(cn);
+					createVersionTable(cn,schema);
 				}
 				else
 				{
-					lcmd.CommandText = "SELECT * from " + C_SCHEMA + "." + C_VERSIONTABLE + " where moduleid=@moduleid";
-					var parammoduleid = lcmd.CreateParameter();
-					parammoduleid.ParameterName = "moduleid";
-					parammoduleid.Value = moduleId;
-					lcmd.Parameters.Add(parammoduleid);
+					lcmd.CommandText = "SELECT * from " + C_SCHEMA.Replace(C_SERVICE, schema) + "." + C_VERSIONTABLE ;
 					using (var rd = lcmd.ExecuteReader())
 					{
 						if (rd.HasRows)
@@ -341,7 +332,7 @@ namespace DbUpdater
 						}
 					}
 				}
-				tc.TraceMessage("updates.Count=" + updates.Count() + " moduleid=" + moduleId);
+				tc.TraceMessage("updates.Count=" + updates.Count() + " moduleid=" + schema);
 				return updates;
 			}
 		}
@@ -352,18 +343,14 @@ namespace DbUpdater
 			{
 				var ver = new Version(0, 0, 0, 0);
 				var lcmd = cn.CreateCommand();
-				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + C_SCHEMA + "' AND  TABLE_NAME = '" + C_VERSIONTABLE + "'";
+				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + C_SCHEMA.Replace(C_SERVICE, moduleId) + "' AND  TABLE_NAME = '" + C_VERSIONTABLE + "'";
 				if ((int) lcmd.ExecuteScalar() == 0)
 				{
-					createVersionTable(cn);
+					createVersionTable(cn,moduleId);
 				}
 				else
 				{
-					lcmd.CommandText = "SELECT top 1 * from " + C_SCHEMA + "." + C_VERSIONTABLE + " where moduleid=@moduleid order by major desc,minor desc,build desc, revision desc";
-					var parammoduleid = lcmd.CreateParameter();
-					parammoduleid.ParameterName = "moduleid";
-					parammoduleid.Value = moduleId;
-					lcmd.Parameters.Add(parammoduleid);
+					lcmd.CommandText = "SELECT top 1 * from " + C_SCHEMA + "." + C_VERSIONTABLE + " order by major desc,minor desc,build desc, revision desc";
 					using (var rd = lcmd.ExecuteReader())
 					{
 						if (rd.HasRows)
@@ -378,22 +365,22 @@ namespace DbUpdater
 			}
 		}
 
-		private void createVersionTable(SqlConnection cn)
+		private void createVersionTable(SqlConnection cn, string moduleId)
 		{
 			using (var tc = new UnityTraceContext())
 			{
 				var lcmd = cn.CreateCommand();
-				lcmd.CommandText = C_CREATEVERSIONTABLE;
+				lcmd.CommandText = C_CREATEVERSIONTABLE.Replace(C_SERVICE, moduleId);
 				lcmd.ExecuteNonQuery();
 			}
 		}
 
-		private void createsoaSchema(SqlConnection cn)
+		private void createsoaSchema(SqlConnection cn, string moduleId)
 		{
 			using (var tc = new UnityTraceContext())
 			{
 				var lcmd = cn.CreateCommand();
-				lcmd.CommandText = C_CREATESOASCHEMA;
+				lcmd.CommandText = C_CREATESOASCHEMA.Replace(C_SERVICE, moduleId);
 				lcmd.ExecuteNonQuery();
 			}
 		}
@@ -406,7 +393,7 @@ namespace DbUpdater
 		public string Path;
 		public Version Version;
 		public string ScriptName;
-		public string Module;
+		public string Schema;
 		public string Configuration;
 		public string Comment="";
 		public List<string> ConnectionStrings = new List<string>();
