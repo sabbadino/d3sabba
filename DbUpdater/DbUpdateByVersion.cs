@@ -26,12 +26,12 @@ namespace DbUpdater
 		private static Regex _VersionRegEx= new Regex("\\d+\\.\\d+\\.\\d+\\.\\d+");
 
 		private const string C_VERSIONTABLE ="dbversion";
-		private const string C_SCHEMA = "dbo";
+		private const string C_SCHEMA = "soa";
 
 		private const string C_INSER_VERSION_ROW =
 			@"INSERT into [" + C_SCHEMA + "].[" + C_VERSIONTABLE + @"] ([ModuleID], [Major],[Minor],[Build],[Revision],[Comment], [DateInsert]) 
 		VALUES(@ModuleID, @Major,@Minor,@Build,@Revision,@Comment,@DateInsert) ";
-
+		private const string C_CREATESOASCHEMA = @"CREATE SCHEMA [" + C_SCHEMA + @"]";
 		private const string C_CREATEVERSIONTABLE = @"CREATE TABLE [" + C_SCHEMA + "].[" + C_VERSIONTABLE + @"](
 	[Id] [int] IDENTITY(1,1) NOT NULL,
 	[ModuleID] [varchar](100) NOT NULL,
@@ -101,11 +101,10 @@ namespace DbUpdater
 		{
 			using (var tc = new UnityTraceContext())
 			{
-				foreach (var script in scriptsForModule.Value)
+				// get all the db potententially involved in the update
+				var cnstrings = getCnStringsFromScriptConfiguration(scriptsForModule.Value);
+				foreach (var cnString in cnstrings)
 				{
-					var cnstrings = getCnStringsFromScriptConfiguration(script);
-					foreach (var cnString in cnstrings)
-					{
 						tc.TraceMessage("cnstring=" + cnString);
 						using (var ts = new TransactionScope())
 						{
@@ -113,17 +112,19 @@ namespace DbUpdater
 							{
 								cn.Open();
 								var scriptsInfoToExecute = new List<ScriptInfoByVersion>();
+								// cerco gli script da eseguire per quel db .. escludo quelli script che su quel db non deono andare ( v.ConnectionStrings.Contains(cnString) )
 								if (_updateStrategy == UpdateStrategy.Full)
 								{
 									var dbcurUpdatesForModule = getDbExistingUpdates(cn, scriptsForModule.Key);
 									scriptsInfoToExecute =
-										scriptsForModule.Value.Where(v => !dbcurUpdatesForModule.Contains(v.Version)).ToList();
+										scriptsForModule.Value.Where(
+											v => !dbcurUpdatesForModule.Contains(v.Version) && v.ConnectionStrings.Contains(cnString)).ToList();
 								}
 								else
 								{
 									var dbcurVer = getDbVersion(cn, scriptsForModule.Key);
 									scriptsInfoToExecute =
-										scriptsForModule.Value.Where(v => v.Version > dbcurVer).ToList();
+										scriptsForModule.Value.Where(v => v.Version > dbcurVer && v.ConnectionStrings.Contains(cnString)).ToList();
 								}
 
 								if (scriptsInfoToExecute.Count > 0)
@@ -133,31 +134,39 @@ namespace DbUpdater
 							}
 							ts.Complete();
 						}
-					}
+					
 				}
 			}
 		}
 
-		private List<string> getCnStringsFromScriptConfiguration(ScriptInfoByVersion script)
+		private List<string> getCnStringsFromScriptConfiguration(List<ScriptInfoByVersion> scripts)
 		{
 			using (var tc = new UnityTraceContext())
 			{
-				tc.TraceMessage("Processing script.ScriptName=" + script.ScriptName + "script.Configuration=" + script.Configuration);
 				var listcnstring = new List<string>();
-				var nodes =
-					_configXml.SelectNodes("/config/context_configurations/context_configuration[@name='" + script.Configuration +
-					                       "']/context/@name");
-				if (nodes.Count == 0) throw new Exception("no configuration named " + script.Configuration + " was found");
-				var envnode = _configXml.SelectSingleNode("/config/environments/environment[@name='" + _targetEnvironment + "']");
-				if (envnode == null) throw new Exception("no environment named " + _targetEnvironment + " was found");
-				foreach (XmlNode node in nodes)
+				foreach (var script in scripts)
 				{
-					tc.TraceMessage("script is in context " + node.InnerText);
-					var cnstringAttr = envnode.SelectSingleNode("context[@name='" + node.InnerText + "']/@connection_string");
-					if (cnstringAttr != null)
+					tc.TraceMessage("Processing script.ScriptName=" + script.ScriptName + "script.Configuration=" +
+					                script.Configuration);
+					var nodes =
+						_configXml.SelectNodes("/config/context_configurations/context_configuration[@name='" + script.Configuration +
+						                       "']/context/@name");
+					if (nodes.Count == 0) throw new Exception("no configuration named " + script.Configuration + " was found");
+					var envnode = _configXml.SelectSingleNode("/config/environments/environment[@name='" + _targetEnvironment + "']");
+					if (envnode == null) throw new Exception("no environment named " + _targetEnvironment + " was found");
+					foreach (XmlNode node in nodes)
 					{
-						tc.TraceMessage("Adding cnstring " + cnstringAttr.InnerText);
-						listcnstring.Add(cnstringAttr.InnerText);
+						tc.TraceMessage("script is in context " + node.InnerText);
+						var cnstringAttr = envnode.SelectSingleNode("context[@name='" + node.InnerText + "']/@connection_string");
+						if (cnstringAttr != null)
+						{
+							script.ConnectionStrings.Add(cnstringAttr.InnerText);
+							if (!listcnstring.Contains(cnstringAttr.InnerText))
+							{
+								tc.TraceMessage("Adding cnstring " + cnstringAttr.InnerText);
+								listcnstring.Add(cnstringAttr.InnerText);
+							}
+						}
 					}
 				}
 				return listcnstring;
@@ -211,19 +220,20 @@ namespace DbUpdater
 			}
 		}
 
-		private void executeScripts(List<ScriptInfoByVersion> scriptsInfoToExecute, SqlConnection cn)
+		private void executeScripts(List<ScriptInfoByVersion> scripts, SqlConnection cn)
 		{
 			using (var tc = new UnityTraceContext())
 			{
-				scriptsInfoToExecute.ForEach(script =>
+				scripts.ForEach(script =>
 				{
 					var cmd = cn.CreateCommand();
 					cmd.CommandText = File.ReadAllText(script.Path);
 					cmd.ExecuteNonQuery();
 					updateDbVersion(cn, script);
 				});
-			}
 		}
+		}
+
 
 		private Dictionary<string,List<ScriptInfoByVersion>> loadScriptInfo()
 		{
@@ -302,6 +312,12 @@ namespace DbUpdater
 			{
 				var updates = new List<Version>();
 				var lcmd = cn.CreateCommand();
+
+				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.schemata WHERE SCHEMA_NAME = '" + C_SCHEMA + "'";
+				if ((int)lcmd.ExecuteScalar() == 0)
+				{
+					createsoaSchema(cn);
+				}
 				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + C_SCHEMA + "' AND  TABLE_NAME = '" + C_VERSIONTABLE + "'";
 				if ((int)lcmd.ExecuteScalar() == 0)
 				{
@@ -309,7 +325,7 @@ namespace DbUpdater
 				}
 				else
 				{
-					lcmd.CommandText = "SELECT top 1 * from " + C_SCHEMA + "." + C_VERSIONTABLE + " where moduleid=@moduleid order by major desc,minor desc,build desc, revision desc";
+					lcmd.CommandText = "SELECT * from " + C_SCHEMA + "." + C_VERSIONTABLE + " where moduleid=@moduleid";
 					var parammoduleid = lcmd.CreateParameter();
 					parammoduleid.ParameterName = "moduleid";
 					parammoduleid.Value = moduleId;
@@ -371,6 +387,17 @@ namespace DbUpdater
 				lcmd.ExecuteNonQuery();
 			}
 		}
+
+		private void createsoaSchema(SqlConnection cn)
+		{
+			using (var tc = new UnityTraceContext())
+			{
+				var lcmd = cn.CreateCommand();
+				lcmd.CommandText = C_CREATESOASCHEMA;
+				lcmd.ExecuteNonQuery();
+			}
+		}
+
 	}
 
 	public class ScriptInfoByVersion : IComparable, IEquatable<ScriptInfoByVersion>
@@ -382,15 +409,18 @@ namespace DbUpdater
 		public string Module;
 		public string Configuration;
 		public string Comment="";
+		public List<string> ConnectionStrings = new List<string>();
 
 		public int CompareTo(object obj)
 		{
 			return this.Version.CompareTo(((ScriptInfoByVersion)obj).Version);
 		}
 
+
 		public bool Equals(ScriptInfoByVersion other)
 		{
 			return this.Version == other.Version;
 		}
 	}
+
 }

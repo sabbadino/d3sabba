@@ -33,9 +33,9 @@ namespace DbUpdater
 		{
 			try
 			{
-				var dbUpdate = new DbUpdateByDate(radioButton_F.Checked ? UpdateStrategy.Full : UpdateStrategy.WaterMark, textBox_Env.Text, textBox_conffile.Text, textBox_scripbydate.Text);
-				dbUpdate.Doupdate();
-				MessageBox.Show("Done");
+				//var dbUpdate = new DbUpdateByDate(radioButton_F.Checked ? UpdateStrategy.Full : UpdateStrategy.WaterMark, textBox_Env.Text, textBox_conffile.Text, textBox_scripbydate.Text);
+				//dbUpdate.Doupdate();
+				//MessageBox.Show("Done");
 			}
 			catch (Exception ex)
 			{

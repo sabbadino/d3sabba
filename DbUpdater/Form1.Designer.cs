@@ -67,7 +67,7 @@
 			this.textBox_folder.Name = "textBox_folder";
 			this.textBox_folder.Size = new System.Drawing.Size(472, 20);
 			this.textBox_folder.TabIndex = 3;
-			this.textBox_folder.Text = "C:\\ProgrammingStuff\\MyCode\\d3sabba\\DbUpdater\\scripts_byversion";
+			this.textBox_folder.Text = "C:\\Unity\\SOA\\CountriesService\\develop\\sqldeploy";
 			// 
 			// label3
 			// 
@@ -84,7 +84,7 @@
 			this.textBox_Env.Name = "textBox_Env";
 			this.textBox_Env.Size = new System.Drawing.Size(472, 20);
 			this.textBox_Env.TabIndex = 5;
-			this.textBox_Env.Text = "PRJ5-UNITY";
+			this.textBox_Env.Text = "LOCAL";
 			// 
 			// label4
 			// 
