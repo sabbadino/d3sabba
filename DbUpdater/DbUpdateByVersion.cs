@@ -26,8 +26,10 @@ namespace DbUpdater
 		private static Regex _VersionRegEx= new Regex("\\d+\\.\\d+\\.\\d+\\.\\d+");
 
 		private const string C_VERSIONTABLE ="dbversion";
-		private const string C_SCHEMA = "soa-#service#";
+		private const string C_SCHEMA = "#service#";
 		private const string C_SERVICE = "#service#";
+		private const string C_SEAPARATOR = "-";
+
 
 		private const string C_INSERT_VERSION_ROW =
 			@"INSERT into [" + C_SCHEMA + "].[" + C_VERSIONTABLE + @"] ([Major],[Minor],[Build],[Revision],[Comment], [DateInsert]) 
@@ -248,25 +250,25 @@ namespace DbUpdater
 					}
 					else
 					{
-						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer version from name");
-						continue;
+						throw new Exception("Script " + scriptInfo + " not added to list since could not infer version from name");
+						//continue;
 					}
-					int pos = scriptInfo.ScriptName.IndexOf('_');
+					int pos = scriptInfo.ScriptName.IndexOf('-');
 					if (pos != -1)
 					{
 						scriptInfo.Schema = scriptInfo.ScriptName.Substring(0, pos);
 					}
 					else
 					{
-						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the modulename");
-						continue;
+						throw new Exception("Script " + scriptInfo + " not added to list since could not infer the schema");
+						//continue;
 					}
 
-					int pos1 = scriptInfo.ScriptName.LastIndexOf('_');
+					int pos1 = scriptInfo.ScriptName.LastIndexOf('-');
 					if (pos1 == pos)
 					{
-						tc.TraceMessage("Script " + scriptInfo + " not added to list since could not infer the Configuration  name (only one _ )");
-						continue;
+						throw new Exception("Script " + scriptInfo + " not added to list since could not infer the Configuration  name (only one _ )");
+						//continue;
 					}
 					if (pos1 != -1)
 					{
@@ -290,7 +292,7 @@ namespace DbUpdater
 						scriptInfos.Add(scriptInfo.Schema, scriptListforSchema);
 					}
 					if (scriptListforSchema.Contains(scriptInfo))
-						throw new Exception("script with version " + scriptInfo.Version + " has already been added to the list for module " + scriptInfo.Schema);
+						throw new Exception("script with version " + scriptInfo.Version + " has already been added to the list for schema" + scriptInfo.Schema);
 					scriptListforSchema.Add(scriptInfo);
 				};
 				foreach (var scriptset in scriptInfos.Values)
@@ -332,21 +334,21 @@ namespace DbUpdater
 						}
 					}
 				}
-				tc.TraceMessage("updates.Count=" + updates.Count() + " moduleid=" + schema);
+				tc.TraceMessage("updates.Count=" + updates.Count() + " schema=" + schema);
 				return updates;
 			}
 		}
 
-		private Version getDbVersion(SqlConnection cn, string moduleId)
+		private Version getDbVersion(SqlConnection cn, string schema)
 		{
 			using (var tc = new UnityTraceContext())
 			{
 				var ver = new Version(0, 0, 0, 0);
 				var lcmd = cn.CreateCommand();
-				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + C_SCHEMA.Replace(C_SERVICE, moduleId) + "' AND  TABLE_NAME = '" + C_VERSIONTABLE + "'";
+				lcmd.CommandText = "SELECT count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + C_SCHEMA.Replace(C_SERVICE, schema) + "' AND  TABLE_NAME = '" + C_VERSIONTABLE + "'";
 				if ((int) lcmd.ExecuteScalar() == 0)
 				{
-					createVersionTable(cn,moduleId);
+					createVersionTable(cn,schema);
 				}
 				else
 				{
@@ -365,22 +367,22 @@ namespace DbUpdater
 			}
 		}
 
-		private void createVersionTable(SqlConnection cn, string moduleId)
+		private void createVersionTable(SqlConnection cn, string schema)
 		{
 			using (var tc = new UnityTraceContext())
 			{
 				var lcmd = cn.CreateCommand();
-				lcmd.CommandText = C_CREATEVERSIONTABLE.Replace(C_SERVICE, moduleId);
+				lcmd.CommandText = C_CREATEVERSIONTABLE.Replace(C_SERVICE, schema);
 				lcmd.ExecuteNonQuery();
 			}
 		}
 
-		private void createsoaSchema(SqlConnection cn, string moduleId)
+		private void createsoaSchema(SqlConnection cn, string schema)
 		{
 			using (var tc = new UnityTraceContext())
 			{
 				var lcmd = cn.CreateCommand();
-				lcmd.CommandText = C_CREATESOASCHEMA.Replace(C_SERVICE, moduleId);
+				lcmd.CommandText = C_CREATESOASCHEMA.Replace(C_SERVICE, schema);
 				lcmd.ExecuteNonQuery();
 			}
 		}
