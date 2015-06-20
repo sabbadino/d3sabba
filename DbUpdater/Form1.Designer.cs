@@ -32,7 +32,6 @@
 			this.label2 = new System.Windows.Forms.Label();
 			this.textBox_folder = new System.Windows.Forms.TextBox();
 			this.label3 = new System.Windows.Forms.Label();
-			this.textBox_Env = new System.Windows.Forms.TextBox();
 			this.label4 = new System.Windows.Forms.Label();
 			this.textBox_conffile = new System.Windows.Forms.TextBox();
 			this.button2 = new System.Windows.Forms.Button();
@@ -40,6 +39,7 @@
 			this.textBox_scripbydate = new System.Windows.Forms.TextBox();
 			this.radioButton_F = new System.Windows.Forms.RadioButton();
 			this.radioButton_WM = new System.Windows.Forms.RadioButton();
+			this.comboBox_Env = new System.Windows.Forms.ComboBox();
 			this.SuspendLayout();
 			// 
 			// button1
@@ -78,14 +78,6 @@
 			this.label3.TabIndex = 6;
 			this.label3.Text = "Env";
 			// 
-			// textBox_Env
-			// 
-			this.textBox_Env.Location = new System.Drawing.Point(15, 208);
-			this.textBox_Env.Name = "textBox_Env";
-			this.textBox_Env.Size = new System.Drawing.Size(472, 20);
-			this.textBox_Env.TabIndex = 5;
-			this.textBox_Env.Text = "LOCAL";
-			// 
 			// label4
 			// 
 			this.label4.AutoSize = true;
@@ -102,6 +94,7 @@
 			this.textBox_conffile.Size = new System.Drawing.Size(472, 20);
 			this.textBox_conffile.TabIndex = 7;
 			this.textBox_conffile.Text = "C:\\ProgrammingStuff\\MyCode\\d3sabba\\DbUpdater\\DBScriptRunnerFolder.cfg";
+			this.textBox_conffile.Leave += new System.EventHandler(this.textBox_conffile_Leave);
 			// 
 			// button2
 			// 
@@ -152,11 +145,21 @@
 			this.radioButton_WM.Text = "Update mode WaterMark";
 			this.radioButton_WM.UseVisualStyleBackColor = true;
 			// 
+			// comboBox_Env
+			// 
+			this.comboBox_Env.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.comboBox_Env.FormattingEnabled = true;
+			this.comboBox_Env.Location = new System.Drawing.Point(14, 207);
+			this.comboBox_Env.Name = "comboBox_Env";
+			this.comboBox_Env.Size = new System.Drawing.Size(473, 21);
+			this.comboBox_Env.TabIndex = 14;
+			// 
 			// Form1
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(516, 278);
+			this.Controls.Add(this.comboBox_Env);
 			this.Controls.Add(this.radioButton_WM);
 			this.Controls.Add(this.radioButton_F);
 			this.Controls.Add(this.label1);
@@ -165,12 +168,12 @@
 			this.Controls.Add(this.label4);
 			this.Controls.Add(this.textBox_conffile);
 			this.Controls.Add(this.label3);
-			this.Controls.Add(this.textBox_Env);
 			this.Controls.Add(this.label2);
 			this.Controls.Add(this.textBox_folder);
 			this.Controls.Add(this.button1);
 			this.Name = "Form1";
 			this.Text = "Form1";
+			this.Load += new System.EventHandler(this.Form1_Load);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
@@ -182,7 +185,6 @@
 		private System.Windows.Forms.Label label2;
 		private System.Windows.Forms.TextBox textBox_folder;
 		private System.Windows.Forms.Label label3;
-		private System.Windows.Forms.TextBox textBox_Env;
 		private System.Windows.Forms.Label label4;
 		private System.Windows.Forms.TextBox textBox_conffile;
 		private System.Windows.Forms.Button button2;
@@ -190,6 +192,7 @@
 		private System.Windows.Forms.TextBox textBox_scripbydate;
 		private System.Windows.Forms.RadioButton radioButton_F;
 		private System.Windows.Forms.RadioButton radioButton_WM;
+		private System.Windows.Forms.ComboBox comboBox_Env;
 	}
 }
 
