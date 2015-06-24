@@ -16,7 +16,13 @@ namespace EntityDiffSample.sabba
 		NothingToDo, ToAdd, ToUpdate, ToDelete
 	}
 
-	public class LocalEntityWrapper<T>
+	public abstract class EntityWrapperBase
+	{
+
+		public Dictionary<string, List<LocalEntityWrapper>> WrappedChildren = new Dictionary<string, List<LocalEntityWrapper>>();
+	}
+
+	public class LocalEntityWrapper : EntityWrapperBase
 	{
 		public PersistAction PersistAction 
 		{
@@ -31,22 +37,23 @@ namespace EntityDiffSample.sabba
 			}
 		}
 		public ILocalEntity NewLocalEntity;
-		public ILocalEntity ExistingLocalEntity;
-		public LocalEntityWrapper(ILocalEntity newLocalEntity, ILocalEntity existingLocalEntity, object parent)
+		public ILocalEntity OriginalEntity;
+		public object NewParent;
+		public object OriginalParent;
+		public LocalEntityWrapper(ILocalEntity newLocalEntity, ILocalEntity originalEntity, object newParent, object originalParent)
 		{
-			if (newLocalEntity == null && existingLocalEntity == null) throw new Exception("newLocalEntity == null && existingLocalEntity==null");
-			if (parent == null) throw new Exception("parent == null");
-			ExistingLocalEntity = existingLocalEntity;
+			if (newLocalEntity == null && originalEntity == null) throw new Exception("newLocalEntity == null && originalEntity==null");
+			if (originalEntity == null && !newLocalEntity.LocalId.IsNewIdMagicNumber()) throw new Exception("originalEntity not found but newEntity isn't marked as new. It has type " + newLocalEntity.GetType().Name + " and id=" + newLocalEntity.LocalId);
+			OriginalEntity = originalEntity;
 			NewLocalEntity = newLocalEntity;
-			ParentEntity = parent;
+			NewParent = newParent;
+			OriginalParent = originalParent;
 			if (NewLocalEntity == null) return;
-			if (ExistingLocalEntity == null && !NewLocalEntity.LocalId.IsNewIdMagicNumber()) throw new Exception("original localEntity not found but newEntity isn't marked as new");
 		}
-		public object ParentEntity;
-		public Dictionary<string, List<LocalEntityWrapper<T>>> ChildEntities = new Dictionary<string, List<LocalEntityWrapper<T>>>();
-	}
+		
+		}
 
-	public class AggregateRootWrapper<T>
+	public class AggregateRootWrapper<T> : EntityWrapperBase
 	{
 		public PersistAction PersistAction
 		{
@@ -72,8 +79,7 @@ namespace EntityDiffSample.sabba
 			if (ExistingAggregateRoot == null && !_newAaggregateRootId.IsNewIdMagicNumber()) throw new Exception("original Aggregate not found but newAggregate isn't marked as new");
 
 		}
-		public Dictionary<string, List<LocalEntityWrapper<T>>> ChildEntities = new Dictionary<string, List<LocalEntityWrapper<T>>>();
-
+	
 		private string getAggregateRootId<T>(T nextVersion)
 		{
 			var refId = ((dynamic) nextVersion).RefId;

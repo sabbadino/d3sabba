@@ -54,10 +54,12 @@
     <Compile Include="DomainInfrastructure\ILocalEntity.cs" />
     <Compile Include="DomainInfrastructure\IRepository.cs" />
     <Compile Include="EntityDiff.cs" />
-    <Compile Include="sabba\EntityWrapper.cs" />
+    <Compile Include="sabba\EntityWrapper2.cs" />
+    <Compile Include="Types\ChildrenOfChildrenOfCountryRisk.cs" />
     <Compile Include="Types\Country.cs" />
     <Compile Include="Types\CountryArea.cs" />
     <Compile Include="Types\CountryRef.cs" />
+    <Compile Include="Types\ChildrenOfCountryRisk.cs" />
     <Compile Include="Types\CountryRisk.cs" />
     <Compile Include="Types\CountryWebSite.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

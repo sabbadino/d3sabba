@@ -5,7 +5,7 @@ using EntityDiffSample;
 namespace Geographic.Countries.ServiceModel.Types
 {
 	[DataContract]
-	public class CountryRisk : ILocalEntity
+	public class ChildrenOfCountryRisk : ILocalEntity
 	{
 		[DataMember(Name = "localId", Order = 1, IsRequired = true, EmitDefaultValue = false)]
 		public string LocalId { get; set; }
@@ -13,9 +13,7 @@ namespace Geographic.Countries.ServiceModel.Types
 		[DataMember(Name = "description", Order = 2)]
 		public string Description { get; set; }
 
-
-		[DataMember(Name = "childrenOfCountryRisk", Order = 17)]
-		public List<ChildrenOfCountryRisk> ChildrenOfCountryRisk { get; set; }
-
+		[DataMember(Name = "childrenOfChildrenOfCountryRisk", Order = 17)]
+		public List<ChildrenOfChildrenOfCountryRisk> ChildrenOfChildrenOfCountryRisk { get; set; }
 	}
 }

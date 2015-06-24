@@ -5,29 +5,59 @@ namespace EntityDiffSample.UnitTest
 {
 	public static class DataHelper
 	{
-		public static void CreateCountries(out Country existingCountry, out Country nextCountry)
+		public static void CreateCountries(out Country originalCountry, out Country newCountry)
 		{
-			existingCountry = new Country();
-			existingCountry.RefId = new CountryRef {Id = "1"};
-			existingCountry.Risks = new List<CountryRisk>
+			originalCountry = new Country();
+			originalCountry.RefId = new CountryRef {Id = "1"};
+			originalCountry.Risks = new List<CountryRisk>
 			{
-				new CountryRisk {LocalId = "1"},
+				new CountryRisk {LocalId = "1"}, //Delete
 				new CountryRisk {LocalId = "2"}
 			};
-			existingCountry.WebSites = new List<CountryWebSite>
+			
+
+			originalCountry.WebSites = new List<CountryWebSite>
 			{
-				new CountryWebSite {LocalId = "3"},
+				new CountryWebSite {LocalId = "3"}, //delete
 				new CountryWebSite {LocalId = "5"}
 			};
 
-			nextCountry = new Country();
-			nextCountry.RefId = new CountryRef {Id = "1"};
-			nextCountry.Risks = new List<CountryRisk>
+			originalCountry.Risks[1].ChildrenOfCountryRisk = new List<ChildrenOfCountryRisk>
+			{
+				new ChildrenOfCountryRisk {LocalId = "1", ChildrenOfChildrenOfCountryRisk = new List<ChildrenOfChildrenOfCountryRisk>
+				{
+					new ChildrenOfChildrenOfCountryRisk() { LocalId = "1"},
+					new ChildrenOfChildrenOfCountryRisk() { LocalId = "2"}, //delete
+					new ChildrenOfChildrenOfCountryRisk() { LocalId = "3"} // delete
+				}}
+			};
+
+
+			newCountry = new Country();
+			newCountry.RefId = new CountryRef {Id = "1"};
+			newCountry.Risks = new List<CountryRisk>
 			{
 				new CountryRisk {LocalId = Constants.NEW_ENTITY_ID},
 				new CountryRisk {LocalId = "2"}
 			};
-			nextCountry.WebSites = new List<CountryWebSite>
+
+			newCountry.Risks[1].ChildrenOfCountryRisk = new List<ChildrenOfCountryRisk>
+			{
+				new ChildrenOfCountryRisk {LocalId = "1", ChildrenOfChildrenOfCountryRisk = new List<ChildrenOfChildrenOfCountryRisk>
+				{
+					new ChildrenOfChildrenOfCountryRisk() { LocalId = "1"},
+					new ChildrenOfChildrenOfCountryRisk() { LocalId = Constants.NEW_ENTITY_ID},
+				}},
+				new ChildrenOfCountryRisk {LocalId = Constants.NEW_ENTITY_ID, ChildrenOfChildrenOfCountryRisk = new List<ChildrenOfChildrenOfCountryRisk>
+				{
+					new ChildrenOfChildrenOfCountryRisk() { LocalId = Constants.NEW_ENTITY_ID},
+					new ChildrenOfChildrenOfCountryRisk() { LocalId = Constants.NEW_ENTITY_ID},
+				}}
+			};
+
+
+
+			newCountry.WebSites = new List<CountryWebSite>
 			{
 				new CountryWebSite {LocalId = "5"}
 			};

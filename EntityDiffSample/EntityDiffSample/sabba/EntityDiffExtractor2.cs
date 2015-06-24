@@ -17,77 +17,86 @@ namespace EntityDiffSample.sabba
 
 	public class EntityDiffExtractor2 : IEntityDiffExtractor2
 	{
-		public AggregateRootWrapper<T> Extract<T>(T originalAr, T newAr) where T : class
+		public AggregateRootWrapper<T> Extract<T>(T newAr, T originalAr) where T : class
 		{
 			//wrap the AR
 			var aggregateRootWrapper = new AggregateRootWrapper<T>(newAr, originalAr);
-			var currentWrapper = aggregateRootWrapper;
-			var current = newAr;
+			aggregateRootWrapper.WrappedChildren = wrapRecursive<T>(newAr,originalAr );
+			
+			//var currentWrapper = aggregateRootWrapper;
 
-			//Search for children
-			foreach (var p in currentWrapper.NewAaggregateRoot.GetType().GetProperties())
-			{
-				if (typeof(IList).IsAssignableFrom(p.PropertyType))
-				{
-					var localEntitiesWrapperList = new List<LocalEntityWrapper<T>>();
-					var newChildren = ((IList)p.GetValue(currentWrapper.NewAaggregateRoot, null)).Cast<ILocalEntity>();
-					var originalChildren = ((IList)p.GetValue(currentWrapper.ExistingAggregateRoot, null)).Cast<ILocalEntity>();
-					foreach (var newChild in newChildren)
-					{
-						var originalChild = originalChildren.FirstOrDefault(o => o.LocalId == newChild.LocalId);
-						//Wrap each child
-						var localEntityWrapper = new LocalEntityWrapper<T>(newChild, originalChild, currentWrapper.NewAaggregateRoot);
-						localEntitiesWrapperList.Add(localEntityWrapper);
-						//recursive wrap childs of this entity
-						wrapEntitiesRecursive(localEntityWrapper);
-					}
+			//var current = newAr;
 
-					//items that are in original and not in new must be deleted
-					var localIdsToDelete = originalChildren.Select(o => o.LocalId).Except(newChildren.Select(n => n.LocalId)).ToList();
-					originalChildren.Where(o => localIdsToDelete.Contains(o.LocalId)).ToList().ForEach(o =>
-					{
-						//create a wrapper where new is null and original is the one to be deleted
-						var localEntityWrapper = new LocalEntityWrapper<T>(null, o, currentWrapper.NewAaggregateRoot);
-						localEntitiesWrapperList.Add(localEntityWrapper);
-					});
-					// add the list of wrapped children to the element of the dictionary keyed with the property name
-					aggregateRootWrapper.ChildEntities.Add(p.Name, localEntitiesWrapperList);
-				}
-			}
+			////Search for children
+			//foreach (var p in currentWrapper.NewAaggregateRoot.GetType().GetProperties())
+			//{
+			//	if (typeof(IList).IsAssignableFrom(p.PropertyType))
+			//	{
+			//		var localEntitiesWrapperList = new List<LocalEntityWrapper<T>>();
+			//		var newChildren = ((IList)p.GetValue(currentWrapper.NewAaggregateRoot, null)).Cast<ILocalEntity>();
+			//		var originalChildren = ((IList)p.GetValue(currentWrapper.ExistingAggregateRoot, null)).Cast<ILocalEntity>();
+			//		foreach (var newChild in newChildren)
+			//		{
+			//			var originalChild = originalChildren.FirstOrDefault(o => o.LocalId == newChild.LocalId);
+			//			//Wrap each child
+			//			var localEntityWrapper = new LocalEntityWrapper<T>(newChild, originalChild, currentWrapper.NewAaggregateRoot);
+			//			localEntitiesWrapperList.Add(localEntityWrapper);
+			//			//recursive wrap childs of this entity
+			//			wrapEntitiesRecursive(localEntityWrapper);
+			//		}
+
+			//		//items that are in original and not in new must be deleted
+			//		var localIdsToDelete = originalChildren.Select(o => o.LocalId).Except(newChildren.Select(n => n.LocalId)).ToList();
+			//		originalChildren.Where(o => localIdsToDelete.Contains(o.LocalId)).ToList().ForEach(o =>
+			//		{
+			//			//create a wrapper where new is null and original is the one to be deleted
+			//			var localEntityWrapper = new LocalEntityWrapper<T>(null, o, currentWrapper.NewAaggregateRoot);
+			//			localEntitiesWrapperList.Add(localEntityWrapper);
+			//		});
+			//		// add the list of wrapped children to the element of the dictionary keyed with the property name
+			//		aggregateRootWrapper.WrappedChildren.Add(p.Name, localEntitiesWrapperList);
+			//	}
+			//}
 			return aggregateRootWrapper;
 		}
 
-		private void wrapEntitiesRecursive<T>(LocalEntityWrapper<T> current)
+		private Dictionary<string, List<LocalEntityWrapper>> wrapRecursive<T>(object newObject,object originalObject)
 		{
-			foreach (var p in current.NewLocalEntity.GetType().GetProperties())
+			var ret = new Dictionary<string, List<LocalEntityWrapper>>();
+			if (!(newObject == null && originalObject == null))
 			{
-				if (typeof(IList).IsAssignableFrom(p.PropertyType))
+				foreach (var p in (newObject?? originalObject).GetType().GetProperties())
 				{
-					var localEntitiesWrapperList = new List<LocalEntityWrapper<T>>();
-
-					var newChildren = ((IList)p.GetValue(current.NewLocalEntity, null)).Cast<ILocalEntity>();
-					var originalChildren = ((IList)p.GetValue(current.ExistingLocalEntity, null)).Cast<ILocalEntity>();
-
-					foreach (var newChild in newChildren)
+					if (typeof (IList).IsAssignableFrom(p.PropertyType))
 					{
-						var originalVersionChild = originalChildren.FirstOrDefault(o => o.LocalId == newChild.LocalId);
-						var localEntityWrapper = new LocalEntityWrapper<T>(newChild, originalVersionChild, current.NewLocalEntity);
-						localEntitiesWrapperList.Add(localEntityWrapper);
-						wrapEntitiesRecursive(localEntityWrapper);
+						var localEntitiesWrapperList = new List<LocalEntityWrapper>();
+						// I make sure is never null
+						var newChildren = newObject== null ?
+							new List<ILocalEntity>() :
+							((IList)p.GetValue(newObject, null) == null
+								? new List<ILocalEntity>()
+								: (IList)p.GetValue(newObject, null)).Cast<ILocalEntity>();
+
+						// I make sure is never null
+						var originalChildren = originalObject == null ? 
+							new List<ILocalEntity>() : 
+							((IList)p.GetValue(originalObject, null) == null 
+								? new List<ILocalEntity>() 
+								:  (IList)p.GetValue(originalObject, null)).Cast<ILocalEntity>();
+
+						newChildren.Select(n => n.LocalId).Union(originalChildren.Select(o => o.LocalId)).ToList().ForEach(localId =>
+						{
+							var originalChild = originalChildren.FirstOrDefault(o => o.LocalId == localId);
+							var newChild = newChildren.FirstOrDefault(o => o.LocalId == localId);
+							var localEntityWrapper = new LocalEntityWrapper(newChild, originalChild, newObject, originalObject);
+							localEntitiesWrapperList.Add(localEntityWrapper);
+							localEntityWrapper.WrappedChildren = wrapRecursive<T>(newChild, originalChild);
+						});
+						ret.Add(p.Name, localEntitiesWrapperList);
 					}
-
-					var localIdsToDelete = originalChildren.Select(o => o.LocalId).Except(newChildren.Select(n => n.LocalId))
-							.ToList();
-
-					originalChildren.Where(o => localIdsToDelete.Contains(o.LocalId)).ToList().ForEach(o =>
-					{
-						var localEntityWrapper = new LocalEntityWrapper<T>(null, o, current.NewLocalEntity);
-						localEntitiesWrapperList.Add(localEntityWrapper);
-  					});
-
-					current.ChildEntities.Add(p.Name, localEntitiesWrapperList);
 				}
 			}
+			return ret;
 		}
 
 
@@ -105,9 +114,9 @@ namespace EntityDiffSample.sabba
 
 			}
 
-			foreach (var wrappedChildEntity in aggregateRootWrapper.ChildEntities.Values)
+			foreach (var wrappedChildEntity in aggregateRootWrapper.WrappedChildren.Values)
 			{
-				persistRecursive<T>(wrappedChildEntity, repository);
+				persistRecursive(wrappedChildEntity, repository);
 			}
 
 			//delete of aggrgvate
@@ -117,14 +126,14 @@ namespace EntityDiffSample.sabba
 			}
 		}
 
-		void persistRecursive<T>(List<LocalEntityWrapper<T>> wrappedEntities, object repository)
+		void persistRecursive(List<LocalEntityWrapper> wrappedEntities, object repository)
 		{
 			foreach (var wrappedEntity in wrappedEntities.Where(e => e.PersistAction != PersistAction.ToDelete))
 			{
 				switch (wrappedEntity.PersistAction)
 				{
 					case PersistAction.ToAdd:
-						((dynamic)repository).Add(((dynamic)(wrappedEntity.NewLocalEntity)), ((dynamic)(wrappedEntity.ParentEntity)));
+						((dynamic)repository).Add(((dynamic)(wrappedEntity.NewLocalEntity)), ((dynamic)(wrappedEntity.NewParent)));
 						break;
 					case PersistAction.ToUpdate:
 						((dynamic)repository).Update(((dynamic)(wrappedEntity.NewLocalEntity)));
@@ -135,7 +144,7 @@ namespace EntityDiffSample.sabba
 			}
 			foreach (var entity in wrappedEntities)
 			{
-				foreach (var childEntity in entity.ChildEntities.Values)
+				foreach (var childEntity in entity.WrappedChildren.Values)
 				{
 					persistRecursive(childEntity, repository);
 				}
@@ -143,7 +152,7 @@ namespace EntityDiffSample.sabba
 			//and now the delete
 			foreach (var wrappedEntity in wrappedEntities.Where(e => e.PersistAction == PersistAction.ToDelete))
 			{
-				((dynamic)repository).Delete(((dynamic)(wrappedEntity.ExistingLocalEntity)));
+				((dynamic)repository).Delete(((dynamic)(wrappedEntity.OriginalEntity)));
 			}
 		}
 

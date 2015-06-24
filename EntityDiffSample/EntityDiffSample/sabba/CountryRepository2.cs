@@ -26,6 +26,16 @@ namespace EntityDiffSample
 		void Add(CountryRisk localEntity, Country parentCountry);
 		void Update(CountryRisk localEntity);
 		void Delete(CountryRisk localEntity);
+
+		void Add(ChildrenOfCountryRisk localEntity, CountryRisk parentCountry);
+		void Update(ChildrenOfCountryRisk  localEntity);
+		void Delete(ChildrenOfCountryRisk  localEntity);
+
+		void Add(ChildrenOfChildrenOfCountryRisk localEntity, ChildrenOfCountryRisk parentCountry);
+		void Update(ChildrenOfChildrenOfCountryRisk localEntity);
+		void Delete(ChildrenOfChildrenOfCountryRisk localEntity);
+
+
 	}
 
 	public class CountryRepository2Read : ICountryRepository2Read
@@ -100,6 +110,39 @@ namespace EntityDiffSample
 		}
 
 		public void Delete(CountryRisk localEntity)
+		{
+
+		}
+
+
+
+		public void Add(ChildrenOfCountryRisk localEntity, CountryRisk parentCountryRisk)
+		{
+
+		}
+
+		public void Update(ChildrenOfCountryRisk  localEntity)
+		{
+
+		}
+
+		public void Delete(ChildrenOfCountryRisk localEntity)
+		{
+
+		}
+
+
+		public void Add(ChildrenOfChildrenOfCountryRisk localEntity, ChildrenOfCountryRisk parentChildrenOfCountryRisk)
+		{
+
+		}
+
+		public void Update(ChildrenOfChildrenOfCountryRisk localEntity)
+		{
+
+		}
+
+		public void Delete(ChildrenOfChildrenOfCountryRisk localEntity)
 		{
 
 		}
