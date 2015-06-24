@@ -43,7 +43,10 @@ namespace EntityDiffSample.sabba
 		public LocalEntityWrapper(ILocalEntity newLocalEntity, ILocalEntity originalEntity, object newParent, object originalParent)
 		{
 			if (newLocalEntity == null && originalEntity == null) throw new Exception("newLocalEntity == null && originalEntity==null");
-			if (originalEntity == null && !newLocalEntity.LocalId.IsNewIdMagicNumber()) throw new Exception("originalEntity not found but newEntity isn't marked as new. It has type " + newLocalEntity.GetType().Name + " and id=" + newLocalEntity.LocalId);
+			if (originalEntity == null && !newLocalEntity.LocalId.IsNewIdMagicNumber()) 
+				throw new Exception("originalEntity not found, but newEntity isn't marked as new. The new entity has type " 
+					+ newLocalEntity.GetType().Name + " and id=" + newLocalEntity.LocalId 
+					+ ". Likely the entity has been deleted from the database");
 			OriginalEntity = originalEntity;
 			NewLocalEntity = newLocalEntity;
 			NewParent = newParent;
@@ -76,8 +79,10 @@ namespace EntityDiffSample.sabba
 			NewAaggregateRoot = newAaggregateRoot;
 			ExistingAggregateRoot = existingAggregateRoot;
 			_newAaggregateRootId = getAggregateRootId(NewAaggregateRoot);
-			if (ExistingAggregateRoot == null && !_newAaggregateRootId.IsNewIdMagicNumber()) throw new Exception("original Aggregate not found but newAggregate isn't marked as new");
-
+			if (ExistingAggregateRoot == null && !_newAaggregateRootId.IsNewIdMagicNumber()) 
+				throw new Exception("originalAggregate not found, but newEntity isn't marked as new. The new Aggreagate has type " 
+					+ NewAaggregateRoot.GetType().Name + " and id=" + _newAaggregateRootId 
+					+ ". Likely the entity has been deleted from the database");
 		}
 	
 		private string getAggregateRootId<T>(T nextVersion)
