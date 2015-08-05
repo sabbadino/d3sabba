@@ -36,7 +36,7 @@ namespace SS_ASPNET_01.Tests
 					string baseUrl = ConfigurationManager.AppSettings["baseUrl"]; //"http://localhost:61805";
 					using (var jsonClient = new JsonServiceClient(baseUrl))
 	        {
-						JsConfig.DateHandler = DateHandler.RFC1123;
+						//JsConfig.DateHandler = DateHandler.DCJSCompatible;
 						JsConfig<DateTime>.RawSerializeFn = time =>
 						{
 							var x = new DateTime(time.Ticks, DateTimeKind.Unspecified).ToString("o");
