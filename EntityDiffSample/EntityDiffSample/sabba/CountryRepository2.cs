@@ -99,7 +99,7 @@ namespace EntityDiffSample
 
 		}
 
-		public void Add(CountryRisk localEntity ,Country parentCountry )
+		public void Add(CountryRisk localEntity , Country parentCountry )
 		{
 			
 		}

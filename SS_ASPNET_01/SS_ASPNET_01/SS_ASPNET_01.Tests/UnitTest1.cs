@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Configuration;
 using NUnit.Framework;
-using SS_ASPNET_01.ServiceInterface;
-using SS_ASPNET_01.ServiceModel;
-using ServiceStack.Testing;
 using ServiceStack;
+using ServiceStack.Text;
+using SSTACK_OP = SS_ASPNET_01.ServiceModel;
 
 namespace SS_ASPNET_01.Tests
 {
@@ -30,14 +30,32 @@ namespace SS_ASPNET_01.Tests
           //  appHost.Dispose();
         }
 
-        //[Test]
-        //public void TestMethod1()
-        //{
-        //    var service = appHost.Container.Resolve<MyServices>();
+        [Test]
+        public void TestMethod1()
+        {
+					string baseUrl = ConfigurationManager.AppSettings["baseUrl"]; //"http://localhost:61805";
+					using (var jsonClient = new JsonServiceClient(baseUrl))
+	        {
+						JsConfig.DateHandler = DateHandler.RFC1123;
+						JsConfig<DateTime>.RawSerializeFn = time =>
+						{
+							var x = new DateTime(time.Ticks, DateTimeKind.Unspecified).ToString("o");
+							return x;
+						};
 
-        //    var response = (HelloResponse)service.Any(new Hello { MyName = "World" });
+						JsConfig<DateTime>.DeSerializeFn = time =>
+						{
+							var x = DateTime.ParseExact(time, "o", null);
+							return x;
+						};
 
-        //    Assert.That(response.Result, Is.EqualTo("Hello, World!"));
-        //}
+						var findDate = new SSTACK_OP.FindDate();
+						findDate.DateTime = new DateTime(2015, 08, 12, 12, 12, 12, DateTimeKind.Unspecified);
+						var respp = jsonClient.Post<SSTACK_OP.FindDateResponse>("/json/reply/FindDate", findDate);
+						var respg = jsonClient.Get<SSTACK_OP.FindDateResponse>(findDate);
+	        }
+
+        }
+
     }
 }

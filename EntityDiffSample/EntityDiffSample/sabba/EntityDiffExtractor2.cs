@@ -66,7 +66,7 @@ namespace EntityDiffSample.sabba
 		}
 
 
-		public void Persist<T>(T original, T newVersion, object repository) where T : class
+		public void Persist<T>(T original, T newVersion, object repository) where T : class 
 		{
 			var aggregateRootWrapper = Extract<T>(original, newVersion);
 			switch (aggregateRootWrapper.PersistAction)

@@ -62,9 +62,10 @@ namespace EntityDiffSample.sabba
 		{
 			get
 			{
-				if (NewAaggregateRoot == null)
-					return PersistAction.ToDelete;
-				else if (_newAaggregateRootId.IsNewIdMagicNumber())
+				//if (NewAaggregateRoot == null)
+				//	return PersistAction.ToDelete;
+				//else 
+				if (_newAaggregateRootId.IsNewIdMagicNumber())
 					return PersistAction.ToAdd;
 				else
 					return PersistAction.ToUpdate;
@@ -75,7 +76,7 @@ namespace EntityDiffSample.sabba
 		private string _newAaggregateRootId = "";
 		public AggregateRootWrapper(T newAaggregateRoot, T existingAggregateRoot)
 		{
-			if (newAaggregateRoot == null) return;
+			if (newAaggregateRoot == null) throw new Exception("newAaggregateRoot == null");
 			NewAaggregateRoot = newAaggregateRoot;
 			ExistingAggregateRoot = existingAggregateRoot;
 			_newAaggregateRootId = getAggregateRootId(NewAaggregateRoot);
