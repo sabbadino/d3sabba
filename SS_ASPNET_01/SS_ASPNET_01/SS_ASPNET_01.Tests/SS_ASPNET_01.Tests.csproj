@@ -95,16 +95,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SS_ASPNET_01.ServiceInterface\SS_ASPNET_01.ServiceInterface.csproj">
-      <Project>{801a0f89-d5f6-49a6-bcea-6624388c98a4}</Project>
-      <Name>SS_ASPNET_01.ServiceInterface</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SS_ASPNET_01.ServiceModel\SS_ASPNET_01.ServiceModel.csproj">
-      <Project>{53E82AC1-DD1D-4C66-B55F-F9F4ACFB2F40}</Project>
-      <Name>SS_ASPNET_01.ServiceModel</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
