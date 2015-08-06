@@ -37,4 +37,4 @@ using System.Runtime.Serialization;
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
 [assembly: ContractNamespace("http://myschemas.myservicestack.net/types",
-       ClrNamespace = "SS_ASPNET_01.ServiceModel")]
+			 ClrNamespace = "SS_ASPNET_01.ServiceInterface")]
